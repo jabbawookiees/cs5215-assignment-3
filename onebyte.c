@@ -34,11 +34,20 @@ int onebyte_release(struct inode *inode, struct file *filep) {
 }
 
 ssize_t onebyte_read(struct file *filep, char *buf, size_t count, loff_t *f_pos) {
-/*please complete the function on your own*/
+	if (count > 0) {
+		buf[0] = *onebyte_data;
+	}
+	return 0;
 }
 
 ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos) {
-/*please complete the function on your own*/
+	*onebyte_data = buf[0];
+	printk(KERN_ALERT "count: %lu\n", count);
+	if (count > 1) {
+		return -ENOSPC;
+	} else {
+		return 1;
+	}
 }
 
 static int onebyte_init(void) {
@@ -54,10 +63,9 @@ static int onebyte_init(void) {
 	// To release the memory allocated by kmalloc, use kfree.
 	onebyte_data = kmalloc(sizeof(char), GFP_KERNEL);
 	if (!onebyte_data) {
-	onebyte_exit();
+		onebyte_exit();
 		// cannot allocate memory
-		// return no memory error, negative signify a
-		failure
+		// return no memory error, negative signify a failure
 		return -ENOMEM;
 	}
 	// initialize the value to be X
