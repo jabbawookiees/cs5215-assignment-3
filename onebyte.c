@@ -34,7 +34,6 @@ int onebyte_release(struct inode *inode, struct file *filep) {
 }
 
 ssize_t onebyte_read(struct file *filep, char *buf, size_t count, loff_t *f_pos) {
-	printk(KERN_ALERT "READ count: %lu  f_pos: %lld char: %c\n", count, *f_pos, *buf);
 	if (*f_pos == 0) {
 		buf[0] = *onebyte_data;
 		(*f_pos)++;
@@ -45,7 +44,6 @@ ssize_t onebyte_read(struct file *filep, char *buf, size_t count, loff_t *f_pos)
 }
 
 ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos) {
-	printk(KERN_ALERT "WRITE count: %lu  f_pos: %lld char: %c\n", count, *f_pos, *buf);
 	if (*f_pos == 0) {
 		*onebyte_data = buf[0];
 		(*f_pos)++;
