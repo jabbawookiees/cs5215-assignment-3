@@ -34,19 +34,24 @@ int onebyte_release(struct inode *inode, struct file *filep) {
 }
 
 ssize_t onebyte_read(struct file *filep, char *buf, size_t count, loff_t *f_pos) {
-	if (count > 0) {
+	printk(KERN_ALERT "READ count: %lu  f_pos: %lld char: %c\n", count, *f_pos, *buf);
+	if (*f_pos == 0) {
 		buf[0] = *onebyte_data;
+		(*f_pos)++;
+		return 1;
+	} else {
+		return 0;
 	}
-	return 0;
 }
 
 ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos) {
-	*onebyte_data = buf[0];
-	printk(KERN_ALERT "count: %lu\n", count);
-	if (count > 1) {
-		return -ENOSPC;
-	} else {
+	printk(KERN_ALERT "WRITE count: %lu  f_pos: %lld char: %c\n", count, *f_pos, *buf);
+	if (*f_pos == 0) {
+		*onebyte_data = buf[0];
+		(*f_pos)++;
 		return 1;
+	} else {
+		return -ENOSPC;
 	}
 }
 
