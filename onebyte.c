@@ -10,9 +10,12 @@
 #include <asm/uaccess.h>
 #define ONEBYTE_IOC_MAGIC  'k'
 #define ONEBYTE_HELLO _IO(ONEBYTE_IOC_MAGIC, 1)
-#define ONEBYTE_IOC_MAXNR 1
+#define ONEBYTE_SET_DEVMSG _IOW(ONEBYTE_IOC_MAGIC, 2, char*)
+#define ONEBYTE_COPY_DEVMSG _IOR(ONEBYTE_IOC_MAGIC, 3, char*)
+#define ONEBYTE_IOC_MAXNR 3
 #define MAJOR_NUMBER 61/* forward declaration */
 #define ONEBYTE_SIZE 4000000
+#define MESSAGE_SIZE 1000
 
 int onebyte_open(struct inode *inode, struct file *filep);
 int onebyte_release(struct inode *inode, struct file *filep);
@@ -33,6 +36,8 @@ struct file_operations onebyte_fops = {
 };
 
 char *onebyte_data = NULL;
+char *dev_msg;
+char *user_msg;
 loff_t onebyte_length = 0;
 
 int onebyte_open(struct inode *inode, struct file *filep) {
@@ -108,7 +113,9 @@ static int onebyte_init(void) {
     }
     // allocate ONEBYTE_SIZE bytes of memory for storage
     onebyte_data = kmalloc(sizeof(char) * ONEBYTE_SIZE, GFP_KERNEL);
-    if (!onebyte_data) {
+    dev_msg = kmalloc(sizeof(char) * MESSAGE_SIZE, GFP_KERNEL);
+    user_msg = kmalloc(sizeof(char) * MESSAGE_SIZE, GFP_KERNEL);
+    if (!onebyte_data || !dev_msg || !user_msg) {
         onebyte_exit();
         // cannot allocate memory
         // return no memory error, negative signify a failure
@@ -130,6 +137,14 @@ static void onebyte_exit(void)
         kfree(onebyte_data);
         onebyte_data = NULL;
     }
+    if (dev_msg) {
+        kfree(dev_msg);
+        dev_msg = NULL;
+    }
+    if (user_msg) {
+        kfree(user_msg);
+        user_msg = NULL;
+    }
     // unregister the device
     unregister_chrdev(MAJOR_NUMBER, "onebyte");
     printk(KERN_ALERT "Onebyte device module is unloaded\n");
@@ -138,6 +153,8 @@ static void onebyte_exit(void)
 long ioctl_example(struct file * filp, unsigned int cmd, unsigned long arg) {
     int err = 0;
     int retval = 0;
+    int i;
+    char* msg;
     /*
      * extract the type and number bitfields, and don't decode
      * wrong cmds: return ENOTTY (inappropriate ioctl) before access_ok()
@@ -165,6 +182,24 @@ long ioctl_example(struct file * filp, unsigned int cmd, unsigned long arg) {
     switch(cmd) {
     case ONEBYTE_HELLO:
         printk(KERN_WARNING "hello\n");
+        break;
+    case ONEBYTE_SET_DEVMSG:
+        // Convert the arg to a char* then copy the string to dev_msg
+        msg = (char*)arg;
+        for(i=0; msg[i] != 0 && i < MESSAGE_SIZE - 1; i++) {
+            dev_msg[i] = msg[i];
+        }
+        dev_msg[i] = 0;
+        printk(KERN_INFO "Called SET_DEVMSG with \"%s\"\n", msg);
+        break;
+    case ONEBYTE_COPY_DEVMSG:
+        // Copy the dev_msg to user_msg
+        for(i=0; dev_msg[i] != 0 && i < MESSAGE_SIZE - 1; i++) {
+            user_msg[i] = dev_msg[i];
+        }
+        user_msg[i] = 0;
+        printk(KERN_INFO "Called COPY_DEVMSG\n");
+        printk(KERN_INFO "User Message: %s\n", user_msg);
         break;
     default:  /* redundant, as cmd was checked against MAXNR */
         return -ENOTTY;
