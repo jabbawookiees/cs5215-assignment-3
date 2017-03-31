@@ -1,11 +1,6 @@
-ifneq ($(KERNELRELEASE),)
-	# kbuild part of makefile
-	obj-m  := onebyte.o
-else
-	# normal makefile
-	KDIR ?= /lib/modules/`uname -r`/build
+obj-m  := onebyte.o
 
 default:
-	$(MAKE) -C $(KDIR) M=$$PWD
+	make -C /lib/modules/`uname -r`/build M=$$PWD
 
-endif
+
