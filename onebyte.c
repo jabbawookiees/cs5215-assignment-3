@@ -8,6 +8,7 @@
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
 #define MAJOR_NUMBER 61/* forward declaration */
+#define ONEBYTE_SIZE 4000000
 
 int onebyte_open(struct inode *inode, struct file *filep);
 int onebyte_release(struct inode *inode, struct file *filep);
@@ -34,37 +35,34 @@ int onebyte_release(struct inode *inode, struct file *filep) {
 }
 
 ssize_t onebyte_read(struct file *filep, char *buf, size_t count, loff_t *f_pos) {
-	if (*f_pos == 0) {
-		buf[0] = *onebyte_data;
-		(*f_pos)++;
-		return 1;
-	} else {
-		return 0;
+	int i;
+	for (i=0; i<count && *f_pos < ONEBYTE_SIZE; i++) {
+		buf[i] = onebyte_data[(*f_pos)++];
 	}
+	return i;
 }
 
 ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos) {
-	if (*f_pos == 0) {
-		*onebyte_data = buf[0];
-		(*f_pos)++;
-		return 1;
+	int i;
+	for (i=0; i<count && *f_pos < ONEBYTE_SIZE; i++) {
+		onebyte_data[(*f_pos)++] = buf[i];
+	}
+	if (i == count) {
+		return i;
 	} else {
 		return -ENOSPC;
 	}
 }
 
 static int onebyte_init(void) {
-	int result;
+	int result, i;
 	// register the device
 	result = register_chrdev(MAJOR_NUMBER, "onebyte", &onebyte_fops);
 	if (result < 0) {
 		return result;
 	}
-	// allocate one byte of memory for storage
-	// kmalloc is just like malloc, the second parameter is
-	// the type of memory to be allocated.
-	// To release the memory allocated by kmalloc, use kfree.
-	onebyte_data = kmalloc(sizeof(char), GFP_KERNEL);
+	// allocate ONEBYTE_SIZE bytes of memory for storage
+	onebyte_data = kmalloc(sizeof(char) * ONEBYTE_SIZE, GFP_KERNEL);
 	if (!onebyte_data) {
 		onebyte_exit();
 		// cannot allocate memory
@@ -72,9 +70,13 @@ static int onebyte_init(void) {
 		return -ENOMEM;
 	}
 	// initialize the value to be X
-	*onebyte_data = 'X';
+	for (i=0; i<ONEBYTE_SIZE; i++) {
+		onebyte_data[i] = 'X';
+	}
+
 	printk(KERN_ALERT "This is a onebyte device module\n");
 	return 0;
+
 }
 
 static void onebyte_exit(void)
