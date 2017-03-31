@@ -56,6 +56,11 @@ ssize_t onebyte_read(struct file *filep, char *buf, size_t count, loff_t *f_pos)
 
 ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos) {
 	int i;
+	// Ensure that the onebyte_length is at least as big as f_pos
+	// And that all values are initialized (otherwise we will get garbage when we read!)
+	while(onebyte_length < *f_pos && onebyte_length < ONEBYTE_SIZE) {
+		onebyte_data[onebyte_length++] = 0;
+	}
 	// Copy data over to the correct position
 	for (i=0; i<count && *f_pos < ONEBYTE_SIZE; i++) {
 		onebyte_data[(*f_pos)++] = buf[i];
@@ -75,7 +80,6 @@ ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t 
 
 loff_t onebyte_seek(struct file *filep, loff_t offset, int whence) {
 	loff_t newpos;
-	printk(KERN_ALERT "Seeking %lld %d\n", offset, whence);
 	if (whence == 0) {
 		newpos = offset;
 	} else if (whence == 1) {
@@ -83,6 +87,7 @@ loff_t onebyte_seek(struct file *filep, loff_t offset, int whence) {
 	} else {
 		newpos = onebyte_length + offset;
 	}
+	printk(KERN_INFO "Seeking. offset: %2lld whence: %2d  old_f_pos: %2lld new_f_pos: %2lld", offset, whence, filep->f_pos, newpos);
 	filep->f_pos = newpos;
 	return newpos;
 }
