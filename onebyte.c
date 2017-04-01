@@ -10,7 +10,7 @@
 #include <asm/uaccess.h>
 #define ONEBYTE_IOC_MAGIC  'k'
 #define ONEBYTE_HELLO _IO(ONEBYTE_IOC_MAGIC, 1)
-#define ONEBYTE_SET_DEVMSG _IOW(ONEBYTE_IOC_MAGIC, 2, char*)
+#define ONEBYTE_SET_DEVMSG _IOWR(ONEBYTE_IOC_MAGIC, 2, char*)
 #define ONEBYTE_COPY_DEVMSG _IOR(ONEBYTE_IOC_MAGIC, 3, char*)
 #define ONEBYTE_IOC_MAXNR 3
 #define MAJOR_NUMBER 61/* forward declaration */
@@ -184,22 +184,30 @@ long ioctl_example(struct file * filp, unsigned int cmd, unsigned long arg) {
         printk(KERN_WARNING "hello\n");
         break;
     case ONEBYTE_SET_DEVMSG:
-        // Convert the arg to a char* then copy the string to dev_msg
+        // Convert the arg to a char*
         msg = (char*)arg;
+        printk(KERN_INFO "Called SET_DEVMSG with \"%s\"\n", msg);
+
+        // Store the original value of dev_msg in user_msg
+        for(i=0; dev_msg[i] != 0 && i < MESSAGE_SIZE - 1; i++) {
+            user_msg[i] = dev_msg[i];
+        }
+
+        // Copy msg to dev_msg
         for(i=0; msg[i] != 0 && i < MESSAGE_SIZE - 1; i++) {
             dev_msg[i] = msg[i];
         }
         dev_msg[i] = 0;
-        printk(KERN_INFO "Called SET_DEVMSG with \"%s\"\n", msg);
+        printk(KERN_INFO "New Dev Message: %s\n", dev_msg);
         break;
     case ONEBYTE_COPY_DEVMSG:
+        printk(KERN_INFO "Called COPY_DEVMSG\n");
         // Copy the dev_msg to user_msg
         for(i=0; dev_msg[i] != 0 && i < MESSAGE_SIZE - 1; i++) {
             user_msg[i] = dev_msg[i];
         }
         user_msg[i] = 0;
-        printk(KERN_INFO "Called COPY_DEVMSG\n");
-        printk(KERN_INFO "User Message: %s\n", user_msg);
+        printk(KERN_INFO "New User Message: %s\n", user_msg);
         break;
     default:  /* redundant, as cmd was checked against MAXNR */
         return -ENOTTY;
